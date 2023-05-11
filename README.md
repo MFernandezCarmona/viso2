@@ -1,3 +1,10 @@
+
+
+- Need to calibrate camera and publish camera info before
+- Ignore the rest, very un usued
+
+
+
 viso2
 ==========
 ROS2 Stack containing a wrapper for libviso2, a visual odometry library. 
