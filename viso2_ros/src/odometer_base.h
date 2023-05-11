@@ -10,7 +10,10 @@
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_ros/buffer.h>
+
+
 
 #include <tf2_helper.h>
 
@@ -206,19 +209,22 @@ protected:
 
 
     tf2::Stamped<tf2::Transform> base_transform_stamped;
-
+    geometry_msgs::msg::TransformStamped base_transform_stamped_msg;
+    
     if (publish_tf_)
     {
       if (invert_tf_)
       {
         base_transform_stamped.setData(base_transform.inverse());
-        tf_stamped_msg.transform = tf2::toMsg(base_transform_stamped);
+        base_transform_stamped_msg = tf2::toMsg(base_transform_stamped);
+        tf_stamped_msg.transform = base_transform_stamped_msg.transform;
         tf_broadcaster_.sendTransform(tf_stamped_msg);
       }
       else
       {
         base_transform_stamped.setData(base_transform);
-        tf_stamped_msg.transform = tf2::toMsg(base_transform_stamped);
+        base_transform_stamped_msg = tf2::toMsg(base_transform_stamped);
+        tf_stamped_msg.transform = base_transform_stamped_msg.transform;
         tf_broadcaster_.sendTransform(tf_stamped_msg);
       }
     }
