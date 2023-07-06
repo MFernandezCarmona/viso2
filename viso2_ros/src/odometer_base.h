@@ -49,14 +49,17 @@ private:
 
   // the current integrated camera pose
   tf2::Transform integrated_pose_;
-  // timestamp of the last update
-  rclcpp::Time last_update_time_;
+
 
   // covariances
   std::array<double, 36> pose_covariance_;
   std::array<double, 36> twist_covariance_;
 
 public:
+  //mfc
+  // timestamp of the last update
+  rclcpp::Time last_update_time_;
+
   OdometerBase(const rclcpp::Node::SharedPtr node) : 
     tf_buffer_(node->get_clock()),
     tf_broadcaster_(*node)
@@ -113,6 +116,8 @@ protected:
 
   void integrateAndPublish(const tf2::Transform& delta_transform, const rclcpp::Time& timestamp)
   {
+    RCLCPP_INFO(node_->get_logger(), "[odometer] last timestamp is (%3.3f) sec ", (timestamp).nanoseconds()/1e9  );
+
     if (sensor_frame_id_.empty())
     {
       RCLCPP_ERROR(node_->get_logger(), "[odometer] update called with unknown sensor frame id!");
@@ -120,7 +125,7 @@ protected:
     }
     if (timestamp < last_update_time_)
     {
-      RCLCPP_WARN(node_->get_logger(), "[odometer] saw negative time change in incoming sensor data, resetting pose.");
+      RCLCPP_WARN(node_->get_logger(), "[odometer] saw negative time change (%3.2f s) in incoming sensor data, resetting pose.", (timestamp - last_update_time_).nanoseconds()/1e9  );
       integrated_pose_.setIdentity();
     }
     integrated_pose_ *= delta_transform;
@@ -230,6 +235,7 @@ protected:
     }
 
     last_update_time_ = timestamp;
+    RCLCPP_INFO(node_->get_logger(), "[odometer] last update time is (%3.3f) sec ", (last_update_time_).nanoseconds()/1e9  );
   }
 
 };

@@ -41,7 +41,8 @@ public:
     odometry_params::loadParams(node, visual_odometer_params_);
     camera_sub_ = image_transport::create_camera_subscription(node.get(), "image", std::bind(&MonoOdometer::imageCallback, this, std::placeholders::_1, std::placeholders::_2), transport);
 
-    info_pub_ = node->create_publisher<viso2_ros::msg::VisoInfo>("info", 1);
+    info_pub_ = node->create_publisher<viso2_ros::msg::VisoInfo>("info", 1); 
+
   }
 
 protected:
@@ -50,6 +51,12 @@ protected:
       const sensor_msgs::msg::CameraInfo::ConstSharedPtr& info_msg)
   {
     auto start_time = node_->get_clock()->now();
+
+    //mfc
+    if (last_update_time_ > image_msg->header.stamp) {
+      RCLCPP_INFO(node_->get_logger(), "Ignoring out of secuence image");
+      return;
+    }
 
     bool first_run = false;
     // create odometer if not exists
