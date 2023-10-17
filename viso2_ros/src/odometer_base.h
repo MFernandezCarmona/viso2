@@ -136,6 +136,9 @@ protected:
 
     tf2::TimePoint time_point = tf2::timeFromSec(timestamp.seconds());
     std::string error_msg;
+    bool is_transformed = false; 
+
+    // first try exact transform
     if (tf_buffer_.canTransform(base_link_frame_id_, sensor_frame_id_, time_point, &error_msg))
     {
       base_to_sensor = tf_buffer_.lookupTransform(
@@ -143,18 +146,49 @@ protected:
           sensor_frame_id_,
           time_point);
     tf2::fromMsg(base_to_sensor, base_to_sensor_tf);
+    RCLCPP_DEBUG(node_->get_logger(), "Transform successful");
+    is_transformed = true;
     }
-    else
+
+    // ok try latest
+    if (!is_transformed)
     {
-      RCLCPP_WARN(node_->get_logger(), "10.0 The tf from '%s' to '%s' does not seem to be available, "
-                              "will assume it as identity!",
+      RCLCPP_WARN(node_->get_logger(), "1. The tf from '%s' to '%s' at time '%3.3f' does not seem to be available, "
+                              "will try last available!",
                               base_link_frame_id_.c_str(),
-                              sensor_frame_id_.c_str());
+                              sensor_frame_id_.c_str(),
+                              timestamp.seconds());
+      RCLCPP_DEBUG(node_->get_logger(), "Transform error: %s", error_msg.c_str());
+
+      try
+      {
+      base_to_sensor = tf_buffer_.lookupTransform(
+            base_link_frame_id_,
+            sensor_frame_id_,
+            tf2::TimePointZero);
+      tf2::fromMsg(base_to_sensor, base_to_sensor_tf);
+      RCLCPP_DEBUG(node_->get_logger(), "Transform successful");
+      is_transformed = true;
+      }
+      catch (tf2::TransformException ex)
+      {
+      }
+
+    }
+
+    if (!is_transformed)
+    {
+      RCLCPP_WARN(node_->get_logger(), "2. The tf from '%s' to '%s' at time '%3.3f' does not seem to be available, "
+                              "will assume identity!",
+                              base_link_frame_id_.c_str(),
+                              sensor_frame_id_.c_str(),
+                              tf2_ros::toRclcpp(tf2::TimePointZero).seconds());
       RCLCPP_DEBUG(node_->get_logger(), "Transform error: %s", error_msg.c_str());
 
       tf2::fromMsg(base_to_sensor, base_to_sensor_tf); 
       base_to_sensor_tf.setIdentity();
     }
+
 
     tf2::Transform base_transform = base_to_sensor_tf * integrated_pose_ * base_to_sensor_tf.inverse();
 

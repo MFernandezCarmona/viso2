@@ -39,7 +39,9 @@ public:
     // Read local parameters
     std::string transport = node->declare_parameter("transport", "raw");
     odometry_params::loadParams(node, visual_odometer_params_);
-    camera_sub_ = image_transport::create_camera_subscription(node.get(), "image", std::bind(&MonoOdometer::imageCallback, this, std::placeholders::_1, std::placeholders::_2), transport);
+    
+    // mfc: is this killing the reception?
+    //camera_sub_ = image_transport::create_camera_subscription(node.get(), "image", std::bind(&MonoOdometer::imageCallback, this, std::placeholders::_1, std::placeholders::_2), transport);
 
     info_pub_ = node->create_publisher<viso2_ros::msg::VisoInfo>("info", 1); 
 
@@ -155,7 +157,7 @@ protected:
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
-  rclcpp::executors::SingleThreadedExecutor exec;
+  rclcpp::executors::MultiThreadedExecutor exec;
 
   /*if (ros::names::remap("image").find("rect") == std::string::npos) {
     ROS_WARN("mono_odometer needs rectified input images. The used image "
