@@ -26,36 +26,35 @@ private:
 
   image_transport::Subscriber camera_sub_;
 
-  rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<viso2_ros::msg::VisoInfo>::SharedPtr info_pub_;
 
   bool replace_;
 
 public:
 
-  MonoOdometerOmnidirectional(const rclcpp::Node::SharedPtr node) : 
-  OdometerBase(node), 
+  MonoOdometerOmnidirectional() : 
+  OdometerBase(), 
   replace_(false)
   {
 
-    node_ = node;
     // Read local parameters
-    odometry_params::loadParams(node_, visual_odometer_params_);
+    rclcpp::Node* parent = this;
+    odometry_params::loadParams(parent, visual_odometer_params_);
 
-    std::string transport = node_->declare_parameter("transport", "raw");
+    std::string transport = this->declare_parameter("transport", "raw");
 
     rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
     
-    camera_sub_ = image_transport::create_subscription(node_.get(), "image", [&](auto& image_msg) { this->imageCallback(image_msg); }, transport, custom_qos);
+    camera_sub_ = image_transport::create_subscription(this, "image", [&](auto& image_msg) { this->imageCallback(image_msg); }, transport, custom_qos);
 
-    info_pub_ = node_->create_publisher<viso2_ros::msg::VisoInfo>("info", 1);
+    info_pub_ = this->create_publisher<viso2_ros::msg::VisoInfo>("info", 1);
   }
 
 protected:
 
   void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr& image_msg)
   {
-    auto start_time = node_->get_clock()->now();
+    auto start_time = this->get_clock()->now();
  
     bool first_run = false;
     // create odometer if not exists
@@ -64,7 +63,7 @@ protected:
       first_run = true;
       visual_odometer_.reset(new VisualOdometryMonoOmnidirectional(visual_odometer_params_));
       if (image_msg->header.frame_id != "") setSensorFrameId(image_msg->header.frame_id);
-      RCLCPP_INFO(node_->get_logger(), "Initialized libviso2 mono odometry "
+      RCLCPP_INFO(this->get_logger(), "Initialized libviso2 mono odometry "
                       "with the following parameters: %s", 
                       visual_odometer_params_);
     }
@@ -103,7 +102,7 @@ protected:
       {
         replace_ = false;
         Matrix camera_motion = Matrix::inv(visual_odometer_->getMotion());
-        RCLCPP_DEBUG(node_->get_logger(), "Found %i matches with %i inliers.", 
+        RCLCPP_DEBUG(this->get_logger(), "Found %i matches with %i inliers.", 
                   visual_odometer_->getNumberOfMatches(),
                   visual_odometer_->getNumberOfInliers());
         //RCLCPP_DEBUG(this->get_logger(), "libviso2 returned the following motion:\n %s", camera_motion);
@@ -119,7 +118,7 @@ protected:
       }
       else
       {
-        RCLCPP_DEBUG(node_->get_logger(), "Call to VisualOdometryMono::process() failed. Assuming motion too small.");
+        RCLCPP_DEBUG(this->get_logger(), "Call to VisualOdometryMono::process() failed. Assuming motion too small.");
         replace_ = true;
         tf2::Transform delta_transform;
         delta_transform.setIdentity();
@@ -145,8 +144,6 @@ protected:
 
 int main(int argc, char **argv)
 {
-  rclcpp::init(argc, argv);
-  rclcpp::executors::SingleThreadedExecutor exec;
 
   /*if (ros::names::remap("image").find("rect") == std::string::npos) {
     ROS_WARN("mono_odometer needs rectified input images. The used image "
@@ -154,13 +151,12 @@ int main(int argc, char **argv)
              ros::names::remap("image").c_str());
   }*/
 
-  rclcpp::NodeOptions options;
-  auto node = std::make_shared<rclcpp::Node>("mono_odometer_omnidirectional_node", options);
-  auto odometer = std::make_shared<viso2_ros::MonoOdometerOmnidirectional>(node);
-  
-  exec.add_node(node);
 
-  exec.spin();
-  rclcpp::shutdown();
-  return 0;
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<viso2_ros::MonoOdometerOmnidirectional>();
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
+
+
 }

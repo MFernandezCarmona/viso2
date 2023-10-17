@@ -11,7 +11,7 @@ namespace odometry_params
 {
  
 /// loads matcher params
-void loadParams(const rclcpp::Node::SharedPtr node, Matcher::parameters& params)
+void loadParams(rclcpp::Node* node, Matcher::parameters& params)
 {
   params.nms_n = node->declare_parameter("nms_n",                  params.nms_n);
   params.nms_tau = node->declare_parameter("nms_tau",                params.nms_tau);
@@ -26,7 +26,7 @@ void loadParams(const rclcpp::Node::SharedPtr node, Matcher::parameters& params)
 }
 
 /// loads bucketing params
-void loadParams(const rclcpp::Node::SharedPtr node, VisualOdometry::bucketing& bucketing)
+void loadParams(rclcpp::Node* node, VisualOdometry::bucketing& bucketing)
 {
   bucketing.max_features = node->declare_parameter("max_features",  bucketing.max_features);
   bucketing.bucket_width = node->declare_parameter("bucket_width",  bucketing.bucket_width);
@@ -34,14 +34,14 @@ void loadParams(const rclcpp::Node::SharedPtr node, VisualOdometry::bucketing& b
 }
 
 /// loads common odometry params
-void loadCommonParams(const rclcpp::Node::SharedPtr node, VisualOdometry::parameters& params)
+void loadCommonParams(rclcpp::Node* node, VisualOdometry::parameters& params)
 {
   loadParams(node, params.match);
   loadParams(node, params.bucket);
 }
 
 /// loads common & stereo specific params
-void loadParams(const rclcpp::Node::SharedPtr node, VisualOdometryStereo::parameters& params)
+void loadParams(rclcpp::Node* node, VisualOdometryStereo::parameters& params)
 {
   loadCommonParams(node, params);
   params.ransac_iters = node->declare_parameter("ransac_iters",     params.ransac_iters);
@@ -50,7 +50,7 @@ void loadParams(const rclcpp::Node::SharedPtr node, VisualOdometryStereo::parame
 }
 
 /// loads common & mono specific params
-void loadParams(const rclcpp::Node::SharedPtr node, VisualOdometryMono::parameters& params)
+void loadParams(rclcpp::Node* node, VisualOdometryMono::parameters& params)
 {
   loadCommonParams(node, params);
   if (!node->get_parameter("camera_height", params.height))
@@ -67,7 +67,7 @@ void loadParams(const rclcpp::Node::SharedPtr node, VisualOdometryMono::paramete
 }
 
 /// loads common & omnidirectional mono specific params
-void loadParams(const rclcpp::Node::SharedPtr node, VisualOdometryMonoOmnidirectional::parameters& params)
+void loadParams(rclcpp::Node* node, VisualOdometryMonoOmnidirectional::parameters& params)
 {
   loadCommonParams(node, params);
   params.ransac_iters = node->declare_parameter("ransac_iters",     params.ransac_iters);

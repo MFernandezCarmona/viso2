@@ -25,12 +25,9 @@ namespace viso2_ros
  * publishing. This can be used as base for any incremental pose estimating
  * sensor. Sensors that measure velocities cannot be used.
  */
-class OdometerBase
+class OdometerBase : public rclcpp::Node
 {
 private:
-
-  // private node handle
-  rclcpp::Node::SharedPtr node_;
 
   // publisher
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
@@ -39,11 +36,13 @@ private:
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr reset_service_;
 
   // tf related
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+
   std::string sensor_frame_id_;
   std::string odom_frame_id_;
   std::string base_link_frame_id_;
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformBroadcaster tf_broadcaster_;
   bool publish_tf_;
   bool invert_tf_;
 
@@ -60,31 +59,33 @@ public:
   // timestamp of the last update
   rclcpp::Time last_update_time_;
 
-  OdometerBase(const rclcpp::Node::SharedPtr node) : 
-    tf_buffer_(node->get_clock()),
-    tf_broadcaster_(*node)
+  OdometerBase() : Node("detect_steps") 
   {
-    node_ = node;
     // Read local parameters
-    odom_frame_id_ = node_->declare_parameter("odom_frame_id", "odom");
-    base_link_frame_id_ = node_->declare_parameter("base_link_frame_id", "base_link");
-    sensor_frame_id_ = node_->declare_parameter("sensor_frame_id", "camera");
-    publish_tf_ = node_->declare_parameter("publish_tf", true);
-    invert_tf_ = node_->declare_parameter("invert_tf", false);
+    odom_frame_id_ = this->declare_parameter("odom_frame_id", "odom");
+    base_link_frame_id_ = this->declare_parameter("base_link_frame_id", "base_link");
+    sensor_frame_id_ = this->declare_parameter("sensor_frame_id", "camera");
+    publish_tf_ = this->declare_parameter("publish_tf", true);
+    invert_tf_ = this->declare_parameter("invert_tf", false);
 
-    RCLCPP_INFO(node_->get_logger(), "Basic Odometer Settings: odom_frame_id = %s \n base_link_frame_id = %s \n publish_tf = %s \n invert_tf = %s", odom_frame_id_.c_str(), base_link_frame_id_.c_str(), (publish_tf_?"true":"false"), (invert_tf_?"true":"false"));
+    RCLCPP_INFO(this->get_logger(), "Basic Odometer Settings: odom_frame_id = %s \n base_link_frame_id = %s \n publish_tf = %s \n invert_tf = %s", odom_frame_id_.c_str(), base_link_frame_id_.c_str(), (publish_tf_?"true":"false"), (invert_tf_?"true":"false"));
 
     // advertise
-    odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>("odometry", 1);
-    pose_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 1);
+    odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("odometry", 1);
+    pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 1);
     
-    reset_service_ = node_->create_service<std_srvs::srv::Empty>("reset_pose", std::bind(&OdometerBase::resetPose, this, std::placeholders::_1, std::placeholders::_2));
+    reset_service_ = this->create_service<std_srvs::srv::Empty>("reset_pose", std::bind(&OdometerBase::resetPose, this, std::placeholders::_1, std::placeholders::_2));
 
     integrated_pose_.setIdentity();
-    last_update_time_ = node_->get_clock()->now();
+    last_update_time_ = this->get_clock()->now();
 
     pose_covariance_.fill(0.0);
     twist_covariance_.fill(0.0);
+
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
+    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
   }
 
 protected:
@@ -116,16 +117,16 @@ protected:
 
   void integrateAndPublish(const tf2::Transform& delta_transform, const rclcpp::Time& timestamp)
   {
-    RCLCPP_INFO(node_->get_logger(), "[odometer] last timestamp is (%3.3f) sec ", (timestamp).nanoseconds()/1e9  );
+    RCLCPP_INFO(this->get_logger(), "[odometer] last timestamp is (%3.3f) sec ", (timestamp).nanoseconds()/1e9  );
 
     if (sensor_frame_id_.empty())
     {
-      RCLCPP_ERROR(node_->get_logger(), "[odometer] update called with unknown sensor frame id!");
+      RCLCPP_ERROR(this->get_logger(), "[odometer] update called with unknown sensor frame id!");
       return;
     }
     if (timestamp < last_update_time_)
     {
-      RCLCPP_WARN(node_->get_logger(), "[odometer] saw negative time change (%3.2f s) in incoming sensor data, resetting pose.", (timestamp - last_update_time_).nanoseconds()/1e9  );
+      RCLCPP_WARN(this->get_logger(), "[odometer] saw negative time change (%3.2f s) in incoming sensor data, resetting pose.", (timestamp - last_update_time_).nanoseconds()/1e9  );
       integrated_pose_.setIdentity();
     }
     integrated_pose_ *= delta_transform;
@@ -139,35 +140,35 @@ protected:
     bool is_transformed = false; 
 
     // first try exact transform
-    if (tf_buffer_.canTransform(base_link_frame_id_, sensor_frame_id_, time_point, &error_msg))
+    if (tf_buffer_->canTransform(base_link_frame_id_, sensor_frame_id_, time_point, &error_msg))
     {
-      base_to_sensor = tf_buffer_.lookupTransform(
+      base_to_sensor = tf_buffer_->lookupTransform(
           base_link_frame_id_,
           sensor_frame_id_,
           time_point);
     tf2::fromMsg(base_to_sensor, base_to_sensor_tf);
-    RCLCPP_DEBUG(node_->get_logger(), "Transform successful");
+    RCLCPP_DEBUG(this->get_logger(), "Transform successful");
     is_transformed = true;
     }
 
     // ok try latest
     if (!is_transformed)
     {
-      RCLCPP_WARN(node_->get_logger(), "1. The tf from '%s' to '%s' at time '%3.3f' does not seem to be available, "
+      RCLCPP_WARN(this->get_logger(), "1. The tf from '%s' to '%s' at time '%3.3f' does not seem to be available, "
                               "will try last available!",
                               base_link_frame_id_.c_str(),
                               sensor_frame_id_.c_str(),
                               timestamp.seconds());
-      RCLCPP_DEBUG(node_->get_logger(), "Transform error: %s", error_msg.c_str());
+      RCLCPP_DEBUG(this->get_logger(), "Transform error: %s", error_msg.c_str());
 
       try
       {
-      base_to_sensor = tf_buffer_.lookupTransform(
+      base_to_sensor = tf_buffer_->lookupTransform(
             base_link_frame_id_,
             sensor_frame_id_,
             tf2::TimePointZero);
       tf2::fromMsg(base_to_sensor, base_to_sensor_tf);
-      RCLCPP_DEBUG(node_->get_logger(), "Transform successful");
+      RCLCPP_DEBUG(this->get_logger(), "Transform successful");
       is_transformed = true;
       }
       catch (tf2::TransformException ex)
@@ -178,12 +179,12 @@ protected:
 
     if (!is_transformed)
     {
-      RCLCPP_WARN(node_->get_logger(), "2. The tf from '%s' to '%s' at time '%3.3f' does not seem to be available, "
+      RCLCPP_WARN(this->get_logger(), "2. The tf from '%s' to '%s' at time '%3.3f' does not seem to be available, "
                               "will assume identity!",
                               base_link_frame_id_.c_str(),
                               sensor_frame_id_.c_str(),
                               tf2_ros::toRclcpp(tf2::TimePointZero).seconds());
-      RCLCPP_DEBUG(node_->get_logger(), "Transform error: %s", error_msg.c_str());
+      RCLCPP_DEBUG(this->get_logger(), "Transform error: %s", error_msg.c_str());
 
       tf2::fromMsg(base_to_sensor, base_to_sensor_tf); 
       base_to_sensor_tf.setIdentity();
@@ -257,19 +258,19 @@ protected:
         base_transform_stamped.setData(base_transform.inverse());
         base_transform_stamped_msg = tf2::toMsg(base_transform_stamped);
         tf_stamped_msg.transform = base_transform_stamped_msg.transform;
-        tf_broadcaster_.sendTransform(tf_stamped_msg);
+        tf_broadcaster_->sendTransform(tf_stamped_msg);
       }
       else
       {
         base_transform_stamped.setData(base_transform);
         base_transform_stamped_msg = tf2::toMsg(base_transform_stamped);
         tf_stamped_msg.transform = base_transform_stamped_msg.transform;
-        tf_broadcaster_.sendTransform(tf_stamped_msg);
+        tf_broadcaster_->sendTransform(tf_stamped_msg);
       }
     }
 
     last_update_time_ = timestamp;
-    RCLCPP_INFO(node_->get_logger(), "[odometer] last update time is (%3.3f) sec ", (last_update_time_).nanoseconds()/1e9  );
+    RCLCPP_INFO(this->get_logger(), "[odometer] last update time is (%3.3f) sec ", (last_update_time_).nanoseconds()/1e9  );
   }
 
 };

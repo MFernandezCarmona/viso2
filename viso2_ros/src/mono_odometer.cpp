@@ -24,26 +24,23 @@ private:
 
   image_transport::CameraSubscriber camera_sub_;
   
-  rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<viso2_ros::msg::VisoInfo>::SharedPtr info_pub_;
 
   bool replace_;
 
 public:
-  MonoOdometer(const rclcpp::Node::SharedPtr node) :
-  OdometerBase(node),
+  MonoOdometer() :
+  OdometerBase(),
   replace_(false)
   {
-    node_ = node;
-
     // Read local parameters
-    std::string transport = node->declare_parameter("transport", "raw");
-    odometry_params::loadParams(node, visual_odometer_params_);
+    std::string transport = this->declare_parameter("transport", "raw");
+    rclcpp::Node* parent = this;
+    odometry_params::loadParams(parent, visual_odometer_params_);
     
-    // mfc: is this killing the reception?
-    //camera_sub_ = image_transport::create_camera_subscription(node.get(), "image", std::bind(&MonoOdometer::imageCallback, this, std::placeholders::_1, std::placeholders::_2), transport);
+    camera_sub_ = image_transport::create_camera_subscription(this, "image", std::bind(&MonoOdometer::imageCallback, this, std::placeholders::_1, std::placeholders::_2), transport);
 
-    info_pub_ = node->create_publisher<viso2_ros::msg::VisoInfo>("info", 1); 
+    info_pub_ = this->create_publisher<viso2_ros::msg::VisoInfo>("info", 1); 
 
   }
 
@@ -52,11 +49,11 @@ protected:
       const sensor_msgs::msg::Image::ConstSharedPtr& image_msg,
       const sensor_msgs::msg::CameraInfo::ConstSharedPtr& info_msg)
   {
-    auto start_time = node_->get_clock()->now();
+    auto start_time = this->get_clock()->now();
 
     //mfc
     if (last_update_time_ > image_msg->header.stamp) {
-      RCLCPP_INFO(node_->get_logger(), "Ignoring out of secuence image");
+      RCLCPP_INFO(this->get_logger(), "Ignoring out of secuence image");
       return;
     }
 
@@ -76,7 +73,7 @@ protected:
       if (image_msg->header.frame_id != "") {
         setSensorFrameId(image_msg->header.frame_id);
       }
-      RCLCPP_INFO(node_->get_logger(), "Initialized libviso2 mono odometry with the following parameters: %s", visual_odometer_params_);
+      RCLCPP_INFO(this->get_logger(), "Initialized libviso2 mono odometry with the following parameters: %s", visual_odometer_params_);
     }
 
     // convert image if necessary
@@ -113,7 +110,7 @@ protected:
       {
         replace_ = false;
         Matrix camera_motion = Matrix::inv(visual_odometer_->getMotion());
-        RCLCPP_DEBUG(node_->get_logger(), "Found %i matches with %i inliers.", 
+        RCLCPP_DEBUG(this->get_logger(), "Found %i matches with %i inliers.", 
                   visual_odometer_->getNumberOfMatches(),
                   visual_odometer_->getNumberOfInliers());
         //RCLCPP_DEBUG(this->get_logger(), "libviso2 returned the following motion:\n %s", camera_motion);
@@ -129,7 +126,7 @@ protected:
       }
       else
       {
-        RCLCPP_DEBUG(node_->get_logger(), "Call to VisualOdometryMono::process() failed. Assuming motion too small.");
+        RCLCPP_DEBUG(this->get_logger(), "Call to VisualOdometryMono::process() failed. Assuming motion too small.");
         replace_ = true;
         tf2::Transform delta_transform;
         delta_transform.setIdentity();
@@ -144,7 +141,7 @@ protected:
       info_msg.change_reference_frame = false;
       info_msg.num_matches = visual_odometer_->getNumberOfMatches();
       info_msg.num_inliers = visual_odometer_->getNumberOfInliers();
-      auto time_elapsed = node_->get_clock()->now() - start_time;
+      auto time_elapsed = this->get_clock()->now() - start_time;
       info_msg.runtime = time_elapsed.seconds();
       info_pub_->publish(info_msg);
     }
@@ -156,24 +153,11 @@ protected:
 
 int main(int argc, char **argv)
 {
-  rclcpp::init(argc, argv);
-  rclcpp::executors::MultiThreadedExecutor exec;
 
-  /*if (ros::names::remap("image").find("rect") == std::string::npos) {
-    ROS_WARN("mono_odometer needs rectified input images. The used image "
-             "topic is '%s'. Are you sure the images are rectified?",
-             ros::names::remap("image").c_str());
-  }*/
-
-  rclcpp::NodeOptions options;
-  auto node = std::make_shared<rclcpp::Node>("mono_odometer_node", options);
-  auto odometer = std::make_shared<viso2_ros::MonoOdometer>(node);
-  
-  exec.add_node(node);
-
-  exec.spin();
-  rclcpp::shutdown();
-
-  return 0;
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<viso2_ros::MonoOdometer>();
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
 }
 
