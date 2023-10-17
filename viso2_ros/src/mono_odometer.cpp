@@ -30,7 +30,7 @@ private:
 
 public:
   MonoOdometer() :
-  OdometerBase(),
+  OdometerBase("MonoOdometerNode"),
   replace_(false)
   {
     // Read local parameters

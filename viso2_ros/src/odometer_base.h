@@ -59,7 +59,7 @@ public:
   // timestamp of the last update
   rclcpp::Time last_update_time_;
 
-  OdometerBase() : Node("detect_steps") 
+  OdometerBase(std::string name ) : Node(name) 
   {
     // Read local parameters
     odom_frame_id_ = this->declare_parameter("odom_frame_id", "odom");

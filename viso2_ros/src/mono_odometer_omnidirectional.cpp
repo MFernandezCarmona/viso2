@@ -33,7 +33,7 @@ private:
 public:
 
   MonoOdometerOmnidirectional() : 
-  OdometerBase(), 
+  OdometerBase("MonoOdometerOmniNode"), 
   replace_(false)
   {
 
