@@ -46,28 +46,28 @@ include_directories(src
     ${PCL_INCLUDE_DIRS}
 )
 
-#add_executable(stereo_odometer
-#  src/stereo_odometer.cpp)
+add_executable(stereo_odometer
+  src/stereo_odometer.cpp)
 
-#ament_target_dependencies(stereo_odometer
-#    "libviso2"
-#    "rclcpp"
-#   "sensor_msgs"
-#    "std_msgs"
-#    "pcl_msgs"
-#    "nav_msgs"
-#    "cv_bridge"
-#    "message_filters"
-#    "image_transport"
-#    "image_geometry"
-#    "tf2"
-#    "pcl_conversions"
-#    #"pcl_ros"
-#    "OpenCV")
+ament_target_dependencies(stereo_odometer
+    "libviso2"
+    "rclcpp"
+   "sensor_msgs"
+    "std_msgs"
+    "pcl_msgs"
+    "nav_msgs"
+    "cv_bridge"
+    "message_filters"
+    "image_transport"
+    "image_geometry"
+    "tf2"
+    "pcl_conversions"
+    #"pcl_ros"
+    "OpenCV")
 
 
-#rosidl_target_interfaces(stereo_odometer
-#      viso2_ros "rosidl_typesupport_cpp")
+rosidl_target_interfaces(stereo_odometer
+    ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
 add_executable(mono_odometer
   src/mono_odometer.cpp)
@@ -124,7 +124,7 @@ target_link_libraries(mono_odometer ${OpenCV_LIBRARIES})
 target_link_libraries(mono_odometer_omnidirectional ${OpenCV_LIBRARIES})
 
 install(TARGETS
-  #stereo_odometer
+  stereo_odometer
   mono_odometer
   mono_odometer_omnidirectional
 DESTINATION lib/${PROJECT_NAME})
