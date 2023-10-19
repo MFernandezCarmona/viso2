@@ -171,7 +171,7 @@ protected:
       RCLCPP_DEBUG(this->get_logger(), "Transform successful");
       is_transformed = true;
       }
-      catch (tf2::TransformException ex)
+      catch (tf2::TransformException const&)
       {
       }
 

@@ -30,15 +30,20 @@ def generate_launch_description():
 
     mono_odometer_node = Node(
                         package='viso2_ros', 
-                        executable='mono_odometer', 
+                        executable='stereo_odometer',
+                        name='stereo_odometer', 
                         output='screen', 
-                        remappings=[("/image", "camera/right/image_raw"), 
-                                    ("camera_info", "camera/right/camera_info" )],
+                        remappings=[('/info',  '/viso_info'),
+                                    ('/odometry',  '/viso_odom'),
+                                    ('/stereo_camera/left/camera_info',  '/camera/left/camera_info'),
+                                    ('/stereo_camera/left/image',  '/camera/left/image'),
+                                    ('/stereo_camera/right/camera_info',  '/camera/right/camera_info'),
+                                    ('/stereo_camera/right/image',  '/camera/right/image')
+                        ],
                         parameters=[{
-                            "odom_frame_id": "odom",
-                            "base_link_frame_id": "est_camera/right",
-                            "camera_height": 1.00, 
-                            "camera_pitch": 0.00}]
+                            "odom_frame_id": "viso_odom",
+                            "base_link_frame_id": "base_footprint"
+                        }]
                     )
     ld.add_action(mono_odometer_node)
 

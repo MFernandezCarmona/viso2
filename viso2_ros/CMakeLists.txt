@@ -52,8 +52,10 @@ add_executable(stereo_odometer
 ament_target_dependencies(stereo_odometer
     "libviso2"
     "rclcpp"
-   "sensor_msgs"
+    "sensor_msgs"
     "std_msgs"
+    "std_srvs"
+    "tf2_geometry_msgs"
     "pcl_msgs"
     "nav_msgs"
     "cv_bridge"
