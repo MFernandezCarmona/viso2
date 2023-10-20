@@ -68,7 +68,8 @@ public:
     publish_tf_ = this->declare_parameter("publish_tf", true);
     invert_tf_ = this->declare_parameter("invert_tf", false);
 
-    RCLCPP_INFO(this->get_logger(), "Basic Odometer Settings: odom_frame_id = %s \n base_link_frame_id = %s \n publish_tf = %s \n invert_tf = %s", odom_frame_id_.c_str(), base_link_frame_id_.c_str(), (publish_tf_?"true":"false"), (invert_tf_?"true":"false"));
+    // MFC remapping makes some of these inaccurate
+    //RCLCPP_INFO(this->get_logger(), "Basic Odometer Settings: odom_frame_id = %s \n base_link_frame_id = %s \n publish_tf = %s \n invert_tf = %s", odom_frame_id_.c_str(), base_link_frame_id_.c_str(), (publish_tf_?"true":"false"), (invert_tf_?"true":"false"));
 
     // advertise
     odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("odometry", 1);
@@ -117,7 +118,9 @@ protected:
 
   void integrateAndPublish(const tf2::Transform& delta_transform, const rclcpp::Time& timestamp)
   {
-    RCLCPP_INFO(this->get_logger(), "[odometer] last timestamp is (%3.3f) sec ", (timestamp).nanoseconds()/1e9  );
+    
+    auto& clk = *this->get_clock();
+    RCLCPP_DEBUG_THROTTLE(this->get_logger(), clk, 2000,"[odometer]  timestamp is (%3.3f) sec ", (timestamp).nanoseconds()/1e9  );
 
     if (sensor_frame_id_.empty())
     {
@@ -270,7 +273,8 @@ protected:
     }
 
     last_update_time_ = timestamp;
-    RCLCPP_INFO(this->get_logger(), "[odometer] last update time is (%3.3f) sec ", (last_update_time_).nanoseconds()/1e9  );
+    auto& clk = *this->get_clock();
+    RCLCPP_DEBUG_THROTTLE(this->get_logger(), clk, 2000, "[odometer] update at (%3.3f) sec ", (last_update_time_).nanoseconds()/1e9  );
   }
 
 };

@@ -252,10 +252,13 @@ namespace viso2_ros{
         uint8_t *l_image_data, *r_image_data;
         uint32_t l_step, r_step;
         cv_bridge::CvImageConstPtr l_cv_ptr, r_cv_ptr;
-        l_cv_ptr = cv_bridge::toCvShare(l_image_msg, sensor_msgs::image_encodings::MONO8);
+        l_cv_ptr = cv_bridge::toCvShare(l_image_msg, sensor_msgs::image_encodings::TYPE_8UC1);
+        //l_cv_ptr = cv_bridge::toCvShare(l_image_msg, sensor_msgs::image_encodings::MONO8);
+
         l_image_data = l_cv_ptr->image.data;
         l_step = l_cv_ptr->image.step[0];
-        r_cv_ptr = cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8);
+        r_cv_ptr = cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::TYPE_8UC1);
+        //r_cv_ptr = cv_bridge::toCvShare(r_image_msg, sensor_msgs::image_encodings::MONO8);
         r_image_data = r_cv_ptr->image.data;
         r_step = r_cv_ptr->image.step[0];
 

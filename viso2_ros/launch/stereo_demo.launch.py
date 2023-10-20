@@ -35,14 +35,14 @@ def generate_launch_description():
                         output='screen', 
                         remappings=[('/info',  '/viso_info'),
                                     ('/odometry',  '/viso_odom'),
-                                    ('/stereo_camera/left/camera_info',  '/camera/left/camera_info'),
-                                    ('/stereo_camera/left/image',  '/camera/left/image'),
-                                    ('/stereo_camera/right/camera_info',  '/camera/right/camera_info'),
-                                    ('/stereo_camera/right/image',  '/camera/right/image')
+                                    ('/stereo_camera/left/camera_info',   '/camera/infra1/camera_info'),
+                                    ('/stereo_camera/left/image',         '/camera/infra1/image_rect_raw'),
+                                    ('/stereo_camera/right/camera_info',  '/camera/infra2/camera_info'),
+                                    ('/stereo_camera/right/image',        '/camera/infra2/image_rect_raw')
                         ],
                         parameters=[{
                             "odom_frame_id": "viso_odom",
-                            "base_link_frame_id": "base_footprint"
+                            "base_link_frame_id": "camera_link" #"base_footprint"
                         }]
                     )
     ld.add_action(mono_odometer_node)
