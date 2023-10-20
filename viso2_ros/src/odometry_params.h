@@ -53,14 +53,8 @@ void loadParams(rclcpp::Node* node, VisualOdometryStereo::parameters& params)
 void loadParams(rclcpp::Node* node, VisualOdometryMono::parameters& params)
 {
   loadCommonParams(node, params);
-  if (!node->get_parameter("camera_height", params.height))
-  {
-    RCLCPP_WARN(node->get_logger(), "Parameter 'camera_height' is required but not set. Using default: %f", params.height);
-  }
-  if (!node->get_parameter("camera_pitch", params.pitch))
-  {
-    RCLCPP_WARN(node->get_logger(), "Parameter 'camera_pitch' is required but not set. Using default: %f", params.pitch);
-  }
+  params.height = node->declare_parameter("camera_height",params.height);
+  params.pitch = node->declare_parameter("camera_pitch", params.pitch);
   params.ransac_iters = node->declare_parameter("ransac_iters",     params.ransac_iters);
   params.inlier_threshold = node->declare_parameter("inlier_threshold", params.inlier_threshold);
   params.motion_threshold = node->declare_parameter("motion_threshold", params.motion_threshold);

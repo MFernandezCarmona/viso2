@@ -1,0 +1,40 @@
+viso_odom_node:
+  ros__parameters:
+    base_link_frame_id: base_footprint
+    bucket_height: 50.0
+    bucket_width: 50.0
+    half_resolution: 1
+    inlier_threshold: 1.0e-05
+    invert_tf: false
+    match_binsize: 50
+    match_disp_tolerance: 2
+    match_radius: 200
+    max_features: 2
+    motion_threshold: 50.0
+    multi_stage: 1
+    nms_n: 3
+    nms_tau: 50
+    outlier_disp_tolerance: 5
+    outlier_flow_tolerance: 5
+    qos_overrides:
+      /parameter_events:
+        publisher:
+          depth: 1000
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+      /tf:
+        publisher:
+          depth: 100
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+    ransac_iters: 2000
+    refinement: 1
+    transport: raw
+    use_sim_time: false
+    publish_tf: false
+    odom_frame_id: visual_odom
+    sensor_frame_id: camera
+    camera_height: 0.30 
+    camera_pitch: 0.00
