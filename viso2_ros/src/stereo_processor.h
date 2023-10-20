@@ -20,8 +20,14 @@ namespace viso2_ros
  * It handles synchronization of input topics (approximate or exact)
  * and checks for sync errors.
  * To use this class, subclass it and implement the imageCallback() method.
+ * 
+ * 
+ * MFC: I couldn't figure how to make the StereoOdometer to inherit from
+ *    two different classes (OdometerBase,StereoProcessor) that already 
+ *    inherited from Node so I had to "merge" this one with StereoOdometer.
+ *    This class is no longer used ... crappy programmer to the rescue!
  */
-class StereoProcessor
+class StereoProcessor: public rclcpp::Node
 {
 
 private:
@@ -36,9 +42,7 @@ private:
   std::shared_ptr<ExactSync> exact_sync_;
   std::shared_ptr<ApproximateSync> approximate_sync_;
   int queue_size_;
-
-  rclcpp::Node::SharedPtr node_;
-
+  
   // for sync checking
   int left_received_, right_received_, left_info_received_, right_info_received_, all_received_;
 
@@ -66,7 +70,7 @@ private:
     int threshold = 3 * all_received_;
     if (left_received_ >= threshold || right_received_ >= threshold ||
         left_info_received_ >= threshold || right_info_received_ >= threshold) {
-      RCLCPP_WARN(node_->get_logger(), "[stereo_processor] Low number of synchronized left/right/left_info/right_info tuples received.\n"
+      RCLCPP_WARN(this->get_logger(), "[stereo_processor] Low number of synchronized left/right/left_info/right_info tuples received.\n"
                "Left images received:       %d (topic '%s')\n"
                "Right images received:      %d (topic '%s')\n"
                "Left camera info received:  %d (topic '%s')\n"
@@ -83,7 +87,7 @@ private:
                right_received_, right_sub_.getTopic().c_str(),
                left_info_received_, left_info_sub_.getTopic().c_str(),
                right_info_received_, right_info_sub_.getTopic().c_str(),
-               all_received_, node_->get_name(), queue_size_);
+               all_received_, this->get_name(), queue_size_);
     }
   }
 
@@ -95,7 +99,8 @@ protected:
    * callbacks.
    * \param transport The image transport to use
    */
-  StereoProcessor(const std::string& transport, const rclcpp::Node::SharedPtr node) :
+  StereoProcessor(const std::string& transport) :
+    Node("StereoProcessor"),
     left_received_(0), 
     right_received_(0), 
     left_info_received_(0), 
@@ -104,7 +109,7 @@ protected:
   {
 
     // Assign node
-    node_ = node;
+    this = node;
 
     // Resolve topic names
     std::string stereo_ns = "stereo";
@@ -115,32 +120,32 @@ protected:
     std::string right_info_topic = stereo_ns + "/right/camera_info";
 
     // Subscribe to four input topics.
-    RCLCPP_INFO(node_->get_logger(), "Subscribing to:\n\t* %s\n\t* %s\n\t* %s\n\t* %s",
+    RCLCPP_INFO(this->get_logger(), "Subscribing to:\n\t* %s\n\t* %s\n\t* %s\n\t* %s",
         left_topic.c_str(), right_topic.c_str(),
         left_info_topic.c_str(), right_info_topic.c_str());
 
     rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
     custom_qos.depth = 3;
 
-    image_transport::ImageTransport it(node_);
-    left_sub_.subscribe(node_.get(), left_topic, transport, custom_qos);
-    right_sub_.subscribe(node_.get(), right_topic, transport, custom_qos);
+    image_transport::ImageTransport it(this);
+    left_sub_.subscribe(this.get(), left_topic, transport, custom_qos);
+    right_sub_.subscribe(this.get(), right_topic, transport, custom_qos);
     left_info_sub_.subscribe(it, left_info_topic, transport, custom_qos);
     right_info_sub_.subscribe(it, right_info_topic, transport, custom_qos);
 
-    //left_sub_ = image_transport::create_subscription(node_.get(), left_topic, std::bind(StereoProcessor::increment, &left_received_), transport, custom_qos);
-    //right_sub_ = image_transport::create_subscription(node_.get(), right_topic, std::bind(StereoProcessor::increment, &right_received_), transport, custom_qos);
-    //left_info_sub_ = image_transport::create_subscription(node_.get(), left_info_topic, std::bind(StereoProcessor::increment, &left_info_received_), transport, custom_qos);
-    //right_info_sub_ = image_transport::create_subscription(node_.get(), right_info_topic, std::bind(StereoProcessor::increment, &right_info_received_), transport, custom_qos);
+    //left_sub_ = image_transport::create_subscription(this.get(), left_topic, std::bind(StereoProcessor::increment, &left_received_), transport, custom_qos);
+    //right_sub_ = image_transport::create_subscription(this.get(), right_topic, std::bind(StereoProcessor::increment, &right_received_), transport, custom_qos);
+    //left_info_sub_ = image_transport::create_subscription(this.get(), left_info_topic, std::bind(StereoProcessor::increment, &left_info_received_), transport, custom_qos);
+    //right_info_sub_ = image_transport::create_subscription(this.get(), right_info_topic, std::bind(StereoProcessor::increment, &right_info_received_), transport, custom_qos);
 
     // Complain every 15s if the topics appear unsynchronized
-    auto check_synced_timer_ = node_->create_wall_timer(15s,
+    auto check_synced_timer_ = this->create_wall_timer(15s,
                                              std::bind(&StereoProcessor::checkInputsSynchronized, this));
 
     // Synchronize input topics. Optionally do approximate synchronization.
-    auto queue_size_ = node_->declare_parameter("queue_size", 5);
+    auto queue_size_ = this->declare_parameter("queue_size", 5);
     bool approx;
-    approx = node_->declare_parameter("approximate_sync", false);
+    approx = this->declare_parameter("approximate_sync", false);
     if (approx)
     {
       approximate_sync_.reset(new ApproximateSync(ApproximatePolicy(queue_size_),

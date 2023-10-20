@@ -73,7 +73,10 @@ protected:
       if (image_msg->header.frame_id != "") {
         setSensorFrameId(image_msg->header.frame_id);
       }
-      RCLCPP_INFO(this->get_logger(), "Initialized libviso2 mono odometry with the following parameters: %s", visual_odometer_params_);
+      RCLCPP_INFO(this->get_logger(), "Initialized libviso2 mono odometry with the following parameters: f: %3.3f ,cx: %3.3f , cy: %3.3f", 
+      visual_odometer_params_.calib.f,
+      visual_odometer_params_.calib.cu,
+      visual_odometer_params_.calib.cv);
     }
 
     // convert image if necessary
